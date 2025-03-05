@@ -20,6 +20,7 @@ Docker 27.5.1 or Higher ( for running Redis )
 
 - stop redis: ```docker-compose down```
 
+- delete all data in redis: ```FLUSHDB```
 
 ### User Guide
 todo

@@ -1,13 +1,22 @@
 package com.meng.weatherdemo.service;
 
-import com.meng.weatherdemo.model.WeatherResponse;
+import reactor.core.publisher.Mono;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
+import com.meng.weatherdemo.model.WeatherResponse;
+
+/**
+ * Weather Service Layer with ReactiveRedisTemplate cache.
+ */
 @Service
 public class WeatherService {
+
+    private static final Logger log = LoggerFactory.getLogger(WeatherService.class);
 
     private final WebClient webClient;
     private final WeatherCacheService cacheService;
@@ -19,28 +28,47 @@ public class WeatherService {
     private String apiKey;
 
     public WeatherService(WebClient.Builder webClientBuilder, WeatherCacheService cacheService) {
-        this.webClient = webClientBuilder.baseUrl(apiUrl).build();
+        this.webClient = webClientBuilder.build();  // Do not use baseUrl(apiUrl) since it's injected at runtime.
         this.cacheService = cacheService;
     }
 
+    /**
+     * Get Weather Data with input Zip Code & Country Code using cache first, then fetch from API if not found.
+     * @param zipCode The zip code to query.
+     * @param countryCode The country code to query.
+     * @return Mono<WeatherResponse> with cached or API response.
+     */
     public Mono<WeatherResponse> getWeatherByZipCode(String zipCode, String countryCode) {
-        WeatherResponse cachedResponse = cacheService.getFromCache(zipCode);
-        if (cachedResponse != null) {
-            System.out.println("Cache hit for zipCode: " + zipCode);
-            return Mono.just(cachedResponse);
-        }
 
+        // First try getting from cache.
+        return cacheService.getFromCache(zipCode)
+                .flatMap(cachedResponse -> {
+                    log.info("Cache hit for zipCode: " + zipCode);
+                    // If found in cache, return it.
+                    return Mono.just(cachedResponse);
+                })
+                // If cache is empty, fetch from API.
+                .switchIfEmpty(fetchWeatherFromApi(zipCode, countryCode));
+    }
+
+    /**
+     * Fetch weather data from OpenWeather API and cache the response.
+     * @param zipCode The zip code to query.
+     * @param countryCode The country code to query.
+     * @return Mono<WeatherResponse> from API.
+     */
+    private Mono<WeatherResponse> fetchWeatherFromApi(String zipCode, String countryCode) {
         String url = String.format("%s/forecast?zip=%s,%s&appid=%s&units=metric", apiUrl, zipCode, countryCode, apiKey);
-        System.out.println("Fetching from API: " + url);
-
+        log.info("Fetching from API: " + url);
         return webClient.get()
                 .uri(url)
                 .retrieve()
                 .bodyToMono(WeatherResponse.class)
-                .doOnNext(response -> {
-                    System.out.println("Weather API Response: " + response);
-                    cacheService.saveToCache(zipCode, response); // 儲存到 Redis
+                .flatMap(response -> {
+                    log.info("Weather API Response: " + response);
+                    // Cache the response & return it.
+                    return cacheService.saveToCache(zipCode, response).thenReturn(response);
                 })
-                .doOnError(error -> System.err.println("Error fetching weather: " + error.getMessage()));
+                .doOnError(error -> log.error("Error fetching weather: " + error.getMessage()));
     }
 }
