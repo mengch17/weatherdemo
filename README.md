@@ -65,19 +65,19 @@ _____________________________________________________________________
 ```
 
 - if data NOT found in cache, log will print:
-```json
+```text
 Fetching from API: https://api.openweathermap.org/data/2.5/forecast?zip=94043,US ...
 Weather API Response: ...
 ...
 ```
 and the response will be saved in cache for 30 mins with log point
 
-```json
+```text
 Weather data cached for zipCode: 94043:US with TTL: 30 minutes
 ```  
 
 - if data FOUND in cache:
-```json
+```text
 Cache found for cacheKey:
 Cache hit for zipCode: 94043, US
 ```
