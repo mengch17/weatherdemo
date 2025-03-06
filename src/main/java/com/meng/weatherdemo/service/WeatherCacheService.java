@@ -31,39 +31,39 @@ public class WeatherCacheService {
 
     /**
      * Save Open Weather API Response to Redis asynchronously.
-     * @param zipCode Zip code as the key.
+     * @param cacheKey cacheKey as the key.
      * @param response WeatherResponse to store.
      * @return Mono<Boolean> indicating completion.
      */
-    public Mono<Boolean> saveToCache(String zipCode, WeatherResponse response) {
+    public Mono<Boolean> saveToCache(String cacheKey, WeatherResponse response) {
         return Mono.fromCallable(() -> objectMapper.writeValueAsString(response))
                 .flatMap(json -> reactiveRedisTemplate.opsForValue()
                         // Save to Redis
-                        .set(zipCode, json)
+                        .set(cacheKey, json)
                         // Set TTL in min, use ofSeconds for manual testing.
-                        .then(reactiveRedisTemplate.expire(zipCode, Duration.ofMinutes(CACHE_TTL)))
+                        .then(reactiveRedisTemplate.expire(cacheKey, Duration.ofMinutes(CACHE_TTL)))
                 )
-                .doOnSuccess(v -> log.info("Weather data cached for zipCode: " + zipCode + " with TTL: " + CACHE_TTL + " minutes"))
+                .doOnSuccess(v -> log.info("Weather data cached for zipCode: " + cacheKey + " with TTL: " + CACHE_TTL + " minutes"))
                 .doOnError(e -> log.error("Error saving to Redis: " + e.getMessage()));
     }
 
     /**
      * Fetch cached weather data asynchronously.
-     * @param zipCode Zip code to look up.
+     * @param cacheKey cacheKey to look up.
      * @return Mono<WeatherResponse> containing the cached data if found.
      */
-    public Mono<WeatherResponse> getFromCache(String zipCode) {
+    public Mono<WeatherResponse> getFromCache(String cacheKey) {
         return reactiveRedisTemplate.opsForValue()
-                .get(zipCode)
+                .get(cacheKey)
                 .flatMap(json -> {
                     try {
                         return Mono.just(objectMapper.readValue(json, WeatherResponse.class));
                     } catch (Exception e) {
-                        System.err.println("Error reading from Redis: " + e.getMessage());
+                        log.error("Error reading from Redis: " + e.getMessage());
                         return Mono.empty();
                     }
                 })
-                .doOnNext(response -> log.info("Cache found for zipCode: " + zipCode))
+                .doOnNext(response -> log.info("Cache found for cacheKey: " + cacheKey))
                 .doOnError(e -> log.error("Error fetching from Redis: " + e.getMessage()));
     }
 }

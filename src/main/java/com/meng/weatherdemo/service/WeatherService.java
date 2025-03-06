@@ -1,5 +1,6 @@
 package com.meng.weatherdemo.service;
 
+import com.meng.weatherdemo.model.exception.WeatherNotFoundException;
 import reactor.core.publisher.Mono;
 
 import org.slf4j.Logger;
@@ -27,8 +28,8 @@ public class WeatherService {
     @Value("${weather.api.key}")
     private String apiKey;
 
-    public WeatherService(WebClient.Builder webClientBuilder, WeatherCacheService cacheService) {
-        this.webClient = webClientBuilder.build();  // Do not use baseUrl(apiUrl) since it's injected at runtime.
+    public WeatherService(WebClient webClient, WeatherCacheService cacheService) {
+        this.webClient = webClient;
         this.cacheService = cacheService;
     }
 
@@ -41,9 +42,9 @@ public class WeatherService {
     public Mono<WeatherResponse> getWeatherByZipCode(String zipCode, String countryCode) {
 
         // First try getting from cache.
-        return cacheService.getFromCache(zipCode)
+        return cacheService.getFromCache(generateCacheKey(zipCode, countryCode))
                 .flatMap(cachedResponse -> {
-                    log.info("Cache hit for zipCode: " + zipCode);
+                    log.info("Cache hit for zipCode: " + zipCode + ", " + countryCode);
                     // If found in cache, return it.
                     return Mono.just(cachedResponse);
                 })
@@ -70,5 +71,9 @@ public class WeatherService {
                     return cacheService.saveToCache(zipCode, response).thenReturn(response);
                 })
                 .doOnError(error -> log.error("Error fetching weather: " + error.getMessage()));
+    }
+
+    private String generateCacheKey(String zipCode, String countryCode) {
+        return String.format("%s:%s", zipCode, countryCode);
     }
 }
