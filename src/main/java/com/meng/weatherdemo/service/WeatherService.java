@@ -68,7 +68,7 @@ public class WeatherService {
                 .flatMap(response -> {
                     log.info("Weather API Response: " + response);
                     // Cache the response & return it.
-                    return cacheService.saveToCache(zipCode, response).thenReturn(response);
+                    return cacheService.saveToCache(generateCacheKey(zipCode,countryCode), response).thenReturn(response);
                 })
                 .doOnError(error -> log.error("Error fetching weather: " + error.getMessage()));
     }
