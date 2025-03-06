@@ -23,4 +23,4 @@ Docker 27.5.1 or Higher ( for running Redis )
 - delete all data in redis: ```FLUSHDB```
 
 ### User Guide
-todo
+![alt text](readme_p0.PNG)
