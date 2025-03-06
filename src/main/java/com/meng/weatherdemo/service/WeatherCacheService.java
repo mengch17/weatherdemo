@@ -1,6 +1,8 @@
 package com.meng.weatherdemo.service;
 
 import java.time.Duration;
+
+import org.springframework.beans.factory.annotation.Value;
 import reactor.core.publisher.Mono;
 
 import org.slf4j.Logger;
@@ -20,8 +22,8 @@ public class WeatherCacheService {
 
     private static final Logger log = LoggerFactory.getLogger(WeatherCacheService.class);
 
-    // Cache Time To Live = 30 mins
-    private static final long CACHE_TTL = 30;
+    @Value("${cache.ttl.minutes}")
+    private long CACHE_TTL;
 
     @Autowired
     private ReactiveRedisTemplate<String, String> reactiveRedisTemplate;
