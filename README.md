@@ -83,4 +83,4 @@ Cache hit for zipCode: 94043, US
 ```
 _____________________________________________________________________
 ### Logic Diagram
-![alt text](readme_p0.PNG)
+![alt text](p0.png)
